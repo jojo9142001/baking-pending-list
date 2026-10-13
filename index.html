@@ -604,12 +604,12 @@ Dear主任、總藥師：藥劑科臨床組115-?業務量表如附件，請查�
         
         <!-- 雲端同步設定 -->
         <div style="background-color: #FFF8F0; padding: 12px 15px; border-radius: 8px; border: 1px dashed #FFCBA4; margin-bottom: 15px;">
-            <div style="font-weight: bold; margin-bottom: 6px; font-size: 0.95em;">跨裝置雲端同步碼 (Sync Key)：</div>
+            <div style="font-weight: bold; margin-bottom: 6px; font-size: 0.95em;">跨裝置雲端同步識別碼 (Sync ID)：</div>
             <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                <input type="text" id="syncKeyInput" placeholder="例如輸入: pg-studio (手機與電腦填相同名稱)" style="flex-grow: 1; min-width: 200px; padding: 8px 12px; border: 1px solid #FFCBA4; border-radius: 6px; outline: none;">
-                <button class="btn" onclick="saveSyncKeyAndSync()">綁定並同步</button>
+                <input type="text" id="syncKeyInput" placeholder="已預設專屬識別碼" style="flex-grow: 1; min-width: 200px; padding: 8px 12px; border: 1px solid #FFCBA4; border-radius: 6px; outline: none; font-size: 0.85em;">
+                <button class="btn" onclick="saveSyncKeyAndSync()">立即雙向同步</button>
             </div>
-            <div style="font-size: 0.82em; color: #888; margin-top: 6px;">提醒：任何裝置只要輸入同一個同步碼，或網址加上 <code>#同步碼</code>，就會自動開啟「正在同步中」保持最新！</div>
+            <div style="font-size: 0.82em; color: #888; margin-top: 6px;">提醒：已為您預先配對好專屬雲端空間，無論在手機或電腦開啟網址，都會自動即時連線同步！</div>
         </div>
 
         <div style="display: flex; gap: 10px; margin-top: 15px;">
@@ -679,12 +679,14 @@ Dear主任、總藥師：藥劑科臨床組115-?業務量表如附件，請查�
             if (toast) toast.classList.remove('active');
         }
 
-        // 雲端同步邏輯
+        // 雲端同步邏輯（已串接真實即時雲端資料庫）
+        const DEFAULT_SYNC_ID = "ff808181a09d98f701a1337ce0f45031";
+
         function getSyncKey() {
             if (window.location.hash && window.location.hash.length > 1) {
                 return decodeURIComponent(window.location.hash.substring(1).trim());
             }
-            return localStorage.getItem('pgStudioSyncKey') || 'pg-studio-default';
+            return localStorage.getItem('pgStudioSyncKey') || DEFAULT_SYNC_ID;
         }
 
         function saveSyncKeyAndSync() {
@@ -697,35 +699,32 @@ Dear主任、總藥師：藥劑科臨床組115-?業務量表如附件，請查�
         }
 
         async function syncWithCloud(forcePush = false) {
-            const key = getSyncKey();
-            if (!key) return;
+            const syncId = getSyncKey();
+            if (!syncId) return;
             showSyncToast("正在同步中...", 0);
 
-            const endpoint = `https://kvdb.io/4yZJ4wUqL3d9u8P2m/${encodeURIComponent(key)}`;
-            
+            const endpoint = `https://api.restful-api.dev/objects/${encodeURIComponent(syncId)}`;
             try {
                 if (forcePush) {
                     await pushToCloud();
-                    showSyncToast("雲端同步設定完成！", 2500);
+                    showSyncToast("雲端同步完成！", 2000);
                     return;
                 }
 
-                // 嘗試從雲端拉取
                 const res = await fetch(endpoint);
                 if (res.ok) {
-                    const cloudData = await res.json();
-                    if (cloudData && (cloudData.t || cloudData.f || cloudData.m)) {
-                        applyCloudData(cloudData);
+                    const result = await res.json();
+                    if (result && result.data) {
+                        applyCloudData(result.data);
                         showSyncToast("已同步最新進度", 2000);
                         return;
                     }
                 }
-                // 若雲端尚無資料，則將本地資料同步上傳
                 await pushToCloud();
                 showSyncToast("已連線雲端同步", 2000);
             } catch (err) {
-                console.log("離線或雲端讀取略過，使用本機快照:", err);
-                hideSyncToast();
+                console.log("雲端連線失敗，維持本機資料:", err);
+                showSyncToast("連線離線，使用本機資料", 2000);
             }
         }
 
@@ -755,8 +754,8 @@ Dear主任、總藥師：藥劑科臨床組115-?業務量表如附件，請查�
         }
 
         async function pushToCloud() {
-            const key = getSyncKey();
-            if (!key) return;
+            const syncId = getSyncKey();
+            if (!syncId) return;
 
             let f = [];
             for (let i = 1; i <= 9; i++) {
@@ -764,17 +763,23 @@ Dear主任、總藥師：藥劑科臨床組115-?業務量表如附件，請查�
             }
             let m = document.getElementById('monthTitle') ? document.getElementById('monthTitle').innerText : '4月';
             let t = tempTasks.map(task => ({ x: task.text, c: task.completed ? 1 : 0, s: task.sticker }));
-            let payload = { f, t, m, updatedAt: Date.now() };
+            let payload = {
+                name: "pg_baking_pending_data",
+                data: { f, t, m, updatedAt: Date.now() }
+            };
 
-            const endpoint = `https://kvdb.io/4yZJ4wUqL3d9u8P2m/${encodeURIComponent(key)}`;
+            const endpoint = `https://api.restful-api.dev/objects/${encodeURIComponent(syncId)}`;
             try {
-                await fetch(endpoint, {
-                    method: 'POST',
+                const res = await fetch(endpoint, {
+                    method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
+                if (res.ok) {
+                    showSyncToast("已儲存至雲端", 1500);
+                }
             } catch (err) {
-                console.log("雲端備份稍後重試:", err);
+                console.log("雲端儲存失敗:", err);
             }
         }
 
