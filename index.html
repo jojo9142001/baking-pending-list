@@ -1,0 +1,1130 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PG's Baking Studio</title>
+    <style>
+        /* 整體溫暖馬卡龍粉橘/蜜桃色系 */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #FFF8F0; 
+            color: #000000;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 30px 20px;
+            line-height: 1.6;
+            overflow-x: hidden; 
+        }
+        
+        /* 專屬招牌標題區塊 */
+        .header-banner {
+            position: relative;
+            width: 100%;
+            margin: 0 auto 30px auto;
+            text-align: center;
+            z-index: 10;
+        }
+        .header-banner svg {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        .header-banner h1 {
+            position: absolute;
+            top: 56%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            margin: 0;
+            font-size: 1.8em;
+            color: #000000;
+            border: none;
+            width: 100%;
+            white-space: nowrap;
+            letter-spacing: 2px;
+        }
+
+        /* 標題列排版設定 */
+        .section-header {
+            display: flex;
+            align-items: center;
+            margin-top: 30px;
+            margin-bottom: 15px;
+            gap: 12px;
+        }
+        .section-header h2 {
+            margin: 0;
+            display: inline-block;
+            color: #000000;
+        }
+        
+        /* 可編輯標題的提示特效 */
+        .editable-title {
+            border-bottom: 2px dashed #FFCBA4;
+            padding-bottom: 2px;
+            cursor: text;
+            transition: background-color 0.3s;
+            color: #666666; 
+            display: inline-block;
+            min-width: 40px; 
+            outline: none; 
+        }
+        .editable-title:hover, .editable-title:focus {
+            background-color: #FFF2E6;
+            border-radius: 4px;
+        }
+        
+        .task-container {
+            background-color: #FFFFFF;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            margin-bottom: 20px;
+            position: relative;
+            z-index: 10;
+        }
+        
+        /* === 頂部輸入區與貼紙工具列 === */
+        .top-controls {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap; 
+        }
+        .top-controls input[type="text"] {
+            flex-grow: 1; 
+            min-width: 250px; 
+            padding: 10px 15px;
+            border: 2px solid #FFCBA4;
+            border-radius: 8px;
+            font-size: 1em;
+            color: #000000;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+        .top-controls input[type="text"]:focus {
+            border-color: #FFA07A;
+        }
+        .top-controls input[type="text"]::placeholder {
+            color: #D3D3D3;
+        }
+        
+        /* 貼紙與問號區塊 */
+        .stickers-toolbar {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: nowrap; 
+        }
+        .sticker-item {
+            width: 40px;
+            height: 40px;
+            cursor: grab;
+            transition: transform 0.2s;
+        }
+        .sticker-item:hover {
+            transform: scale(1.15);
+        }
+        
+        /* 點擊問號與提示文字 */
+        .help-icon-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-left: 10px;
+            flex-wrap: nowrap; 
+        }
+        .help-icon {
+            width: 22px;
+            height: 22px;
+            cursor: pointer;
+            transition: transform 0.2s;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+        }
+        .help-icon:hover {
+            transform: scale(1.1);
+        }
+        .help-text {
+            display: none; 
+            font-size: 0.85em;
+            color: #888888;
+            background-color: #FAFAFA;
+            padding: 6px 12px;
+            border-radius: 12px;
+            border: 1px dashed #D3D3D3;
+            white-space: nowrap; 
+        }
+        .help-text.show {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateX(-5px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        
+        /* 任務列表的一行 */
+        .task-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 10px;
+            border-bottom: 1px dashed #FFE8D6;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: background-color 0.2s, opacity 0.2s;
+        }
+        .task-item[draggable="true"] {
+            cursor: grab;
+        }
+        .task-item[draggable="true"]:active {
+            cursor: grabbing;
+        }
+        .task-item.dragging {
+            opacity: 0.4;
+            background-color: #FFE8D6;
+        }
+        .task-item:hover {
+            background-color: #FFF2E6;
+        }
+        .task-item:last-child {
+            border-bottom: none;
+        }
+
+        /* 粉橘馬卡龍專屬打勾框 */
+        input[type="checkbox"] {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 22px;
+            height: 22px;
+            border: 2px solid #FFCBA4;
+            border-radius: 6px;
+            background-color: #FFFFFF;
+            margin-right: 15px;
+            flex-shrink: 0;
+            pointer-events: none; 
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+        input[type="checkbox"]:checked {
+            background-color: #FFCBA4;
+            border-color: #FFCBA4;
+        }
+        input[type="checkbox"]:checked::after {
+            content: '✔';
+            color: white;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        
+        /* 貼紙放置區 */
+        .sticker-dropzone {
+            width: 38px;
+            height: 38px;
+            border: 2px dashed #FFCBA4;
+            border-radius: 8px;
+            margin-right: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            background-color: #FAFAFA;
+            transition: all 0.2s;
+        }
+        .sticker-dropzone:hover {
+            background-color: #FFF2E6;
+        }
+        .sticker-dropzone.has-sticker {
+            border: none;
+            background-color: transparent;
+        }
+        .sticker-dropzone svg {
+            width: 90%;
+            height: 90%;
+            pointer-events: none;
+        }
+        
+        .task-text {
+            flex-grow: 1;
+            font-size: 1.1em;
+            transition: all 0.3s ease;
+            color: #000000;
+        }
+        .completed .task-text {
+            text-decoration: line-through;
+            color: #D3D3D3; 
+        }
+        .path-text {
+            font-size: 0.85em;
+            color: #8C6A54;
+            background: #FFF2E6;
+            border: 1px dashed #FFCBA4;
+            padding: 4px 10px;
+            border-radius: 6px;
+            display: inline-block;
+            margin-top: 6px;
+            font-weight: 500;
+        }
+        
+        /* 按鈕樣式 */
+        .btn {
+            background-color: #FFCBA4;
+            color: #000000;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: background-color 0.2s;
+        }
+        .btn:hover {
+            background-color: #FFA07A;
+        }
+        
+        /* 專屬 SVG 網格碎紙桶按鈕 */
+        .delete-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+            margin-left: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.2s, transform 0.2s;
+        }
+        .delete-btn:hover {
+            background-color: #FFF2E6;
+            transform: scale(1.1);
+        }
+        .delete-btn svg {
+            width: 24px; 
+            height: 24px;
+        }
+        
+        /* 筆記區 */
+        .notes-section {
+            background-color: #FFF2E6;
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 40px;
+            position: relative;
+            z-index: 10;
+        }
+        .notes-btn {
+            background-color: #FFCBA4;
+            color: #000000;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 1em;
+            cursor: pointer;
+            width: 100%;
+            text-align: left;
+            font-weight: bold;
+        }
+        .notes-btn:hover {
+            background-color: #FFA07A;
+        }
+        .notes-content {
+            display: none;
+            margin-top: 15px;
+            white-space: pre-wrap;
+            font-size: 0.95em;
+            color: #000000;
+        }
+        .show {
+            display: block;
+        }
+
+        /* === 飄落玉米粒動畫設定 === */
+        #falling-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none; 
+            z-index: 0; 
+            overflow: hidden;
+        }
+        .falling-item {
+            position: absolute;
+            top: -60px;
+            pointer-events: auto; 
+            cursor: pointer;
+            user-select: none;
+        }
+        .kernel-inner {
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .kernel-inner.popped {
+            transform: scale(1.3) rotate(15deg);
+        }
+        @keyframes fall {
+            0% { top: -60px; }
+            100% { top: 105vh; }
+        }
+        @keyframes sway {
+            0% { transform: translateX(calc(-1 * var(--sway-x))) rotate(-15deg); }
+            100% { transform: translateX(var(--sway-x)) rotate(15deg); }
+        }
+
+        /* === 雲端同步狀態浮動膠囊 === */
+        .sync-toast {
+            position: fixed;
+            bottom: 25px;
+            right: 25px;
+            background: #FFFFFF;
+            border: 2px solid #FFCBA4;
+            color: #E2725B;
+            padding: 10px 18px;
+            border-radius: 30px;
+            font-size: 0.92em;
+            font-weight: bold;
+            box-shadow: 0 4px 15px rgba(255, 160, 122, 0.25);
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            pointer-events: none;
+        }
+        .sync-toast.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .sync-pulse {
+            width: 10px;
+            height: 10px;
+            background-color: #FFA07A;
+            border-radius: 50%;
+            animation: pulse 1.2s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: scale(0.8); opacity: 0.6; }
+            50% { transform: scale(1.3); opacity: 1; }
+            100% { transform: scale(0.8); opacity: 0.6; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="falling-container"></div>
+    <div id="syncToast" class="sync-toast">
+        <div class="sync-pulse"></div>
+        <span id="syncToastText">正在同步中...</span>
+    </div>
+
+    <div class="header-banner">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 150" width="100%">
+            <line x1="30" y1="20" x2="770" y2="20" stroke="#D4A373" stroke-width="10" stroke-linecap="round"/>
+            <line x1="90" y1="20" x2="90" y2="40" stroke="#D4A373" stroke-width="6" stroke-linecap="round"/>
+            <line x1="710" y1="20" x2="710" y2="40" stroke="#D4A373" stroke-width="6" stroke-linecap="round"/>
+            <rect x="40" y="40" width="720" height="90" rx="20" fill="#FFF8F0" stroke="#FFCBA4" stroke-width="8"/>
+            <rect x="52" y="52" width="696" height="66" rx="12" fill="none" stroke="#FFA07A" stroke-width="3" stroke-dasharray="8 6"/>
+            
+            <g transform="translate(80, 55) scale(0.35)" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M 60 150 L 140 150 L 125 95 L 75 95 Z" fill="#FFF0F5" stroke="#FF9AA2" stroke-width="10"/>
+                <line x1="88" y1="95" x2="82" y2="150" stroke="#FF9AA2" stroke-width="8"/>
+                <line x1="112" y1="95" x2="118" y2="150" stroke="#FF9AA2" stroke-width="8"/>
+                <path d="M 65 100 C 40 100, 50 65, 80 70 C 80 35, 120 35, 120 70 C 150 65, 160 100, 135 100 Z" fill="#C7CEEA" stroke="#A5ABC9" stroke-width="10"/>
+                <circle cx="100" cy="40" r="14" fill="#FF6961" stroke="#D9534F" stroke-width="8"/>
+                <path d="M 100 26 C 110 15, 125 20, 130 30" fill="none" stroke="#77DD77" stroke-width="6"/>
+            </g>
+            
+            <g transform="translate(650, 55) scale(0.35)" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M 60 150 L 140 150 L 125 95 L 75 95 Z" fill="#FFF0F5" stroke="#FF9AA2" stroke-width="10"/>
+                <line x1="88" y1="95" x2="82" y2="150" stroke="#FF9AA2" stroke-width="8"/>
+                <line x1="112" y1="95" x2="118" y2="150" stroke="#FF9AA2" stroke-width="8"/>
+                <path d="M 65 100 C 40 100, 50 65, 80 70 C 80 35, 120 35, 120 70 C 150 65, 160 100, 135 100 Z" fill="#C7CEEA" stroke="#A5ABC9" stroke-width="10"/>
+                <circle cx="100" cy="40" r="14" fill="#FF6961" stroke="#D9534F" stroke-width="8"/>
+                <path d="M 100 26 C 110 15, 125 20, 130 30" fill="none" stroke="#77DD77" stroke-width="6"/>
+            </g>
+        </svg>
+        <h1>PG's Baking Studio</h1>
+    </div>
+
+    <div class="task-container">
+        <div class="section-header">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="36" height="36">
+                <g stroke="#FFA07A" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="#FFF8F0">
+                    <path d="M 25 65 C 10 55, 15 35, 35 35 C 40 15, 60 15, 65 35 C 85 35, 90 55, 75 65 Z" />
+                    <rect x="25" y="65" width="50" height="18" rx="6" />
+                    <line x1="40" y1="65" x2="40" y2="83" />
+                    <line x1="60" y1="65" x2="60" y2="83" />
+                </g>
+            </svg>
+            
+            <h2>Baking Projects</h2>
+            
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="36" height="36">
+                <g stroke="#FFA07A" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="#FFF8F0">
+                    <path d="M 25 65 C 10 55, 15 35, 35 35 C 40 15, 60 15, 65 35 C 85 35, 90 55, 75 65 Z" />
+                    <rect x="25" y="65" width="50" height="18" rx="6" />
+                    <line x1="40" y1="65" x2="40" y2="83" />
+                    <line x1="60" y1="65" x2="60" y2="83" />
+                </g>
+            </svg>
+        </div>
+        
+        <div class="top-controls">
+            <input type="text" id="tempInput" placeholder="tap and enter to add..." onkeypress="handleKeyPress(event)">
+            
+            <div class="stickers-toolbar" id="stickersToolbar">
+                <div id="stickersContainer" style="display: flex; gap: 10px;"></div>
+                
+                <div class="help-icon-container">
+                    <div class="help-icon" onclick="toggleHint('helpText')">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+                          <circle cx="50" cy="50" r="40" fill="none" stroke="#A9A9A9" stroke-width="6" stroke-linecap="round"/>
+                          <path d="M 38 42 C 38 32, 62 32, 62 42 C 62 50, 50 55, 50 62" fill="none" stroke="#A9A9A9" stroke-width="6" stroke-linecap="round"/>
+                          <line x1="50" y1="74" x2="50" y2="74" stroke="#A9A9A9" stroke-width="6" stroke-linecap="round"/>
+                        </svg>
+                    </div>
+                    <span class="help-text" id="helpText">drag stickers to label your note</span>
+                </div>
+            </div>
+        </div>
+
+        <div id="tempTaskList" ondragover="allowTaskReorderDrop(event)">
+        </div>
+    </div>
+
+    <div class="task-container">
+        <div class="section-header">
+            <h2>Cupcakes of the Month: 
+                <span id="monthTitle" class="editable-title" contenteditable="true" 
+                      onblur="saveMonthTitle()" 
+                      onkeyup="saveMonthTitle()"
+                      onkeypress="if(event.key === 'Enter') { event.preventDefault(); this.blur(); }">4月</span>
+            </h2>
+            <div class="help-icon-container">
+                <div class="help-icon" onclick="toggleHint('monthHint')">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+                      <circle cx="50" cy="50" r="40" fill="none" stroke="#A9A9A9" stroke-width="6" stroke-linecap="round"/>
+                      <path d="M 38 42 C 38 32, 62 32, 62 42 C 62 50, 50 55, 50 62" fill="none" stroke="#A9A9A9" stroke-width="6" stroke-linecap="round"/>
+                      <line x1="50" y1="74" x2="50" y2="74" stroke="#A9A9A9" stroke-width="6" stroke-linecap="round"/>
+                    </svg>
+                </div>
+                <span class="help-text" id="monthHint">點擊月份可直接修改</span>
+            </div>
+        </div>
+        
+        <div class="task-item" onclick="toggleFixedTask('mar1', this)">
+            <input type="checkbox" id="mar1">
+            <div class="task-text">1. key藥物諮詢10、用藥指導20 (主控台Ctrl,Shift,J)
+                <span class="path-text">院內臨床交接專區</span>
+            </div>
+        </div>
+        <div class="task-item" onclick="toggleFixedTask('mar2', this)">
+            <input type="checkbox" id="mar2">
+            <div class="task-text">2. 上傳上個月ADR (網站 & excel第35列)
+                <span class="path-text">知識管理系統 / 每月業務報表</span>
+            </div>
+        </div>
+        <div class="task-item" onclick="toggleFixedTask('mar3', this)">
+            <input type="checkbox" id="mar3">
+            <div class="task-text">3. 上個月的業務量表</div>
+        </div>
+        <div class="task-item" onclick="toggleFixedTask('mar4', this)">
+            <input type="checkbox" id="mar4">
+            <div class="task-text">4. (每月10號前) 用量前三名二線、平日STAT審核</div>
+        </div>
+        <div class="task-item" onclick="toggleFixedTask('mar5', this)">
+            <input type="checkbox" id="mar5">
+            <div class="task-text">5. (每月6-10日) 獎勵金評核系統</div>
+        </div>
+        <div class="task-item" onclick="toggleFixedTask('mar6', this)">
+            <input type="checkbox" id="mar6">
+            <div class="task-text">6. (每月20號前) 感控各院區更新、獎勵金KPI</div>
+        </div>
+        <div class="task-item" onclick="toggleFixedTask('mar7', this)">
+            <input type="checkbox" id="mar7">
+            <div class="task-text">7. (每月15日前) 提交上個月的評估者名冊給行政副院長</div>
+        </div>
+        <div class="task-item" onclick="toggleFixedTask('mar8', this)">
+            <input type="checkbox" id="mar8">
+            <div class="task-text">8. PHA的R29看上個月的ADR禁開案例，幫通報ADR (建立日期上個月，打勾ADR禁開，發生院區陽明)</div>
+        </div>
+        <div class="task-item" onclick="toggleFixedTask('mar9', this)">
+            <input type="checkbox" id="mar9">
+            <div class="task-text">9. (每月收到通知信後，20號前) pre-ESRD的VPN</div>
+        </div>
+    </div>
+
+    <div class="notes-section">
+        <button class="notes-btn" onclick="toggleNotes()">Show / Hide Recipe</button>
+        <div class="notes-content" id="notesContent">
+2026.?陽明藥劑科-藥物不良反應評估者名單 
+副座您好：
+我是陽明ADR幹事，感謝發放獎勵金，
+藥劑科2月份ADR評估者名單如附件，謝謝您。
+
+敬祝 健康順心
+藥劑科 ADR 幹事 敬上。
+
+
+115-?業務量表
+Dear主任、總藥師：藥劑科臨床組115-?業務量表如附件，請查收 :)
+
+----
+感控]115Q2抗生素報告
+
+主席、委員您好：
+附件是明天感控的藥劑科報告檔案，敬請查收，謝謝您。
+        </div>
+    </div>
+
+    <div class="task-container" style="margin-top: 40px;">
+        <div class="section-header">
+            <h2>食譜備份與雲端同步站</h2>
+            <div class="help-icon-container">
+                <div class="help-icon" onclick="toggleHint('backupHint')">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+                      <circle cx="50" cy="50" r="40" fill="none" stroke="#A9A9A9" stroke-width="6" stroke-linecap="round"/>
+                      <path d="M 38 42 C 38 32, 62 32, 62 42 C 62 50, 50 55, 50 62" fill="none" stroke="#A9A9A9" stroke-width="6" stroke-linecap="round"/>
+                      <line x1="50" y1="74" x2="50" y2="74" stroke="#A9A9A9" stroke-width="6" stroke-linecap="round"/>
+                    </svg>
+                </div>
+                <span class="help-text" id="backupHint">設定專屬雲端同步碼，跨手機、跨電腦隨開隨時更新！</span>
+            </div>
+        </div>
+        
+        <!-- 雲端同步設定 -->
+        <div style="background-color: #FFF8F0; padding: 12px 15px; border-radius: 8px; border: 1px dashed #FFCBA4; margin-bottom: 15px;">
+            <div style="font-weight: bold; margin-bottom: 6px; font-size: 0.95em;">跨裝置雲端同步碼 (Sync Key)：</div>
+            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                <input type="text" id="syncKeyInput" placeholder="例如輸入: pg-studio (手機與電腦填相同名稱)" style="flex-grow: 1; min-width: 200px; padding: 8px 12px; border: 1px solid #FFCBA4; border-radius: 6px; outline: none;">
+                <button class="btn" onclick="saveSyncKeyAndSync()">綁定並同步</button>
+            </div>
+            <div style="font-size: 0.82em; color: #888; margin-top: 6px;">提醒：任何裝置只要輸入同一個同步碼，或網址加上 <code>#同步碼</code>，就會自動開啟「正在同步中」保持最新！</div>
+        </div>
+
+        <div style="display: flex; gap: 10px; margin-top: 15px;">
+            <button class="btn" onclick="generateBackupCode()">產生備份碼</button>
+            <input type="text" id="backupCodeInput" placeholder="在此貼上備份碼來還原..." style="flex-grow: 1; padding: 10px; border: 1px solid #FFCBA4; border-radius: 6px; outline: none;">
+            <button class="btn" onclick="restoreFromCode()">還原</button>
+        </div>
+        <textarea id="backupCodeDisplay" readonly style="width: 100%; display: none; margin-top: 10px; padding: 10px; border-radius: 6px; border: 1px dashed #FFCBA4; background-color: #FFF8F0; color: #000000; word-break: break-all; resize: none;" rows="3"></textarea>
+    </div>
+
+    <script>
+        // 貼紙 SVG 陣列 
+        const STICKERS = [
+            `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><rect width="200" height="200" rx="30" fill="#B5EAD7"/><g stroke-linecap="round" stroke-linejoin="round" transform="translate(0, 12)"><path d="M 40 130 C 40 180, 160 180, 160 130 Z" fill="#C7CEEA" stroke="#A5ABC9" stroke-width="10"/><line x1="30" y1="130" x2="170" y2="130" stroke="#A5ABC9" stroke-width="12"/><path d="M 60 125 C 60 95, 80 85, 100 85 C 120 85, 140 95, 140 125 Z" fill="#FFF9E6" stroke="#E6DAB3" stroke-width="8"/><ellipse cx="150" cy="150" rx="16" ry="22" fill="#FFDAC1" stroke="#E6B89C" stroke-width="8" transform="rotate(25 150 150)"/><path d="M 90 100 C 95 105, 105 105, 110 100" fill="none" stroke="#E6DAB3" stroke-width="4"/></g></svg>`,
+            `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><rect width="200" height="200" rx="30" fill="#FFDAC1"/><g stroke-linecap="round" stroke-linejoin="round" transform="translate(0, 12)"><rect x="40" y="40" width="120" height="120" rx="20" fill="#C7CEEA" stroke="#9A9FD0" stroke-width="10"/><rect x="55" y="80" width="90" height="65" rx="12" fill="#FFF2CC" stroke="#9A9FD0" stroke-width="8"/><circle cx="65" cy="60" r="8" fill="#FFB7B2" stroke="#9A9FD0" stroke-width="4"/><circle cx="90" cy="60" r="8" fill="#FFB7B2" stroke="#9A9FD0" stroke-width="4"/><path d="M 85 135 L 115 135 L 110 120 L 90 120 Z" fill="#FFB7B2" stroke="#FF9AA2" stroke-width="4"/><path d="M 85 120 C 85 105, 115 105, 115 120 Z" fill="#B5EAD7" stroke="#87C4A3" stroke-width="4"/><path d="M 75 100 Q 80 90, 75 85 M 125 100 Q 120 90, 125 85" fill="none" stroke="#FFD700" stroke-width="4" opacity="0.6"/></g></svg>`,
+            `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><rect width="200" height="200" rx="30" fill="#FFB7B2"/><g stroke-linecap="round" stroke-linejoin="round" transform="translate(0, 12)"><path d="M 60 150 L 140 150 L 125 95 L 75 95 Z" fill="#FFF0F5" stroke="#FF9AA2" stroke-width="10"/><line x1="88" y1="95" x2="82" y2="150" stroke="#FF9AA2" stroke-width="8"/>
+            <line x1="112" y1="95" x2="118" y2="150" stroke="#FF9AA2" stroke-width="8"/><path d="M 65 100 C 40 100, 50 65, 80 70 C 80 35, 120 35, 120 70 C 150 65, 160 100, 135 100 Z" fill="#C7CEEA" stroke="#A5ABC9" stroke-width="10"/><circle cx="100" cy="40" r="14" fill="#FF6961" stroke="#D9534F" stroke-width="8"/><path d="M 100 26 C 110 15, 125 20, 130 30" fill="none" stroke="#77DD77" stroke-width="6"/></g></svg>`,
+            `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><rect width="200" height="200" rx="30" fill="#E2F0CB"/><g stroke-linecap="round" stroke-linejoin="round" transform="translate(0, 12)"><path d="M 60 150 L 140 150 L 125 100 L 75 100 Z" fill="#4A4E69" stroke="#22223B" stroke-width="10"/><line x1="88" y1="100" x2="82" y2="150" stroke="#22223B" stroke-width="8"/><line x1="112" y1="100" x2="118" y2="150" stroke="#22223B" stroke-width="8"/><path d="M 65 105 C 40 105, 50 70, 80 75 C 80 40, 120 40, 120 75 C 150 70, 160 105, 135 105 Z" fill="#22223B" stroke="#1A1A2A" stroke-width="10"/><path d="M 90 55 L 100 70 L 95 85" fill="none" stroke="#FFDAC1" stroke-width="5"/><path d="M 125 65 L 115 80 L 120 90" fill="none" stroke="#FFDAC1" stroke-width="5"/><path d="M 65 40 C 50 20, 80 10, 90 25 M 100 20 C 110 -5, 140 10, 130 35 M 140 50 C 160 40, 150 70, 135 65" fill="none" stroke="#9A8C98" stroke-width="8" opacity="0.8"/></g></svg>`
+        ];
+
+        // 網格碎紙桶 SVG
+        const TRASH_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+            <line x1="20" y1="20" x2="80" y2="20" stroke="#A9A9A9" stroke-width="8" stroke-linecap="round"/>
+            <polygon points="25,20 75,20 65,85 35,85" fill="none" stroke="#A9A9A9" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+            <line x1="40" y1="20" x2="45" y2="85" stroke="#A9A9A9" stroke-width="4" stroke-linecap="round"/>
+            <line x1="50" y1="20" x2="50" y2="85" stroke="#A9A9A9" stroke-width="4" stroke-linecap="round"/>
+            <line x1="60" y1="20" x2="55" y2="85" stroke="#A9A9A9" stroke-width="4" stroke-linecap="round"/>
+            <line x1="28" y1="40" x2="72" y2="40" stroke="#A9A9A9" stroke-width="4" stroke-linecap="round"/>
+            <line x1="31" y1="65" x2="69" y2="65" stroke="#A9A9A9" stroke-width="4" stroke-linecap="round"/>
+        </svg>`;
+
+        // 馬卡龍玉米粒與同款配色爆米花
+        const CORN_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="30" height="30">
+            <path d="M 30 25 C 40 20, 60 20, 70 25 C 85 40, 80 70, 65 85 C 55 95, 45 95, 35 85 C 20 70, 15 40, 30 25 Z" fill="#FFE8A1" stroke="#FFCBA4" stroke-width="6" stroke-linejoin="round"/>
+            <ellipse cx="50" cy="70" rx="10" ry="14" fill="#FFFFFF" opacity="0.8"/>
+            <path d="M 35 35 Q 40 30, 50 35" fill="none" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round"/>
+        </svg>`;
+
+        const POPCORN_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="45" height="45">
+            <path d="M30 50 C20 45 10 55 15 70 C10 85 25 95 35 90 C40 100 60 100 70 90 C85 95 95 80 85 65 C95 55 85 35 70 45 C65 25 35 25 30 50 Z" fill="#FFF9E6" stroke="#FFCBA4" stroke-width="5" stroke-linejoin="round"/>
+            <path d="M35 55 C45 65 55 65 65 55" fill="none" stroke="#FFE8A1" stroke-width="6" stroke-linecap="round"/>
+            <circle cx="45" cy="65" r="6" fill="#FFE8A1"/>
+            <circle cx="55" cy="65" r="5" fill="#FFE8A1"/>
+        </svg>`;
+
+        let tempTasks = [];
+        let draggedTaskIndex = null;
+        let cloudSaveTimer = null;
+
+        // 浮動雲端同步提示
+        function showSyncToast(text, duration = 2500) {
+            const toast = document.getElementById('syncToast');
+            const toastText = document.getElementById('syncToastText');
+            if (toast && toastText) {
+                toastText.innerText = text;
+                toast.classList.add('active');
+                if (duration > 0) {
+                    setTimeout(() => {
+                        toast.classList.remove('active');
+                    }, duration);
+                }
+            }
+        }
+
+        function hideSyncToast() {
+            const toast = document.getElementById('syncToast');
+            if (toast) toast.classList.remove('active');
+        }
+
+        // 雲端同步邏輯
+        function getSyncKey() {
+            if (window.location.hash && window.location.hash.length > 1) {
+                return decodeURIComponent(window.location.hash.substring(1).trim());
+            }
+            return localStorage.getItem('pgStudioSyncKey') || 'pg-studio-default';
+        }
+
+        function saveSyncKeyAndSync() {
+            const key = document.getElementById('syncKeyInput').value.trim();
+            if (key) {
+                localStorage.setItem('pgStudioSyncKey', key);
+                window.location.hash = encodeURIComponent(key);
+                syncWithCloud(true);
+            }
+        }
+
+        async function syncWithCloud(forcePush = false) {
+            const key = getSyncKey();
+            if (!key) return;
+            showSyncToast("正在同步中...", 0);
+
+            const endpoint = `https://kvdb.io/4yZJ4wUqL3d9u8P2m/${encodeURIComponent(key)}`;
+            
+            try {
+                if (forcePush) {
+                    await pushToCloud();
+                    showSyncToast("雲端同步設定完成！", 2500);
+                    return;
+                }
+
+                // 嘗試從雲端拉取
+                const res = await fetch(endpoint);
+                if (res.ok) {
+                    const cloudData = await res.json();
+                    if (cloudData && (cloudData.t || cloudData.f || cloudData.m)) {
+                        applyCloudData(cloudData);
+                        showSyncToast("已同步最新進度", 2000);
+                        return;
+                    }
+                }
+                // 若雲端尚無資料，則將本地資料同步上傳
+                await pushToCloud();
+                showSyncToast("已連線雲端同步", 2000);
+            } catch (err) {
+                console.log("離線或雲端讀取略過，使用本機快照:", err);
+                hideSyncToast();
+            }
+        }
+
+        function applyCloudData(data) {
+            if (data.f && data.f.length) {
+                data.f.forEach((val, index) => {
+                    let id = 'mar' + (index + 1);
+                    localStorage.setItem(id, val === 1 ? 'true' : 'false');
+                    const box = document.getElementById(id);
+                    if (box) {
+                        box.checked = (val === 1);
+                        if (val === 1) box.closest('.task-item').classList.add('completed');
+                        else box.closest('.task-item').classList.remove('completed');
+                    }
+                });
+            }
+            if (data.t) {
+                tempTasks = data.t.map(task => ({ text: task.x, completed: task.c === 1, sticker: task.s }));
+                localStorage.setItem('sabrinaTempTasks', JSON.stringify(tempTasks));
+                renderTempTasks();
+            }
+            if (data.m) {
+                localStorage.setItem('pgStudioMonth', data.m);
+                const titleElement = document.getElementById('monthTitle');
+                if (titleElement) titleElement.innerText = data.m;
+            }
+        }
+
+        async function pushToCloud() {
+            const key = getSyncKey();
+            if (!key) return;
+
+            let f = [];
+            for (let i = 1; i <= 9; i++) {
+                f.push(localStorage.getItem('mar' + i) === 'true' ? 1 : 0);
+            }
+            let m = document.getElementById('monthTitle') ? document.getElementById('monthTitle').innerText : '4月';
+            let t = tempTasks.map(task => ({ x: task.text, c: task.completed ? 1 : 0, s: task.sticker }));
+            let payload = { f, t, m, updatedAt: Date.now() };
+
+            const endpoint = `https://kvdb.io/4yZJ4wUqL3d9u8P2m/${encodeURIComponent(key)}`;
+            try {
+                await fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+            } catch (err) {
+                console.log("雲端備份稍後重試:", err);
+            }
+        }
+
+        function triggerAutoSync() {
+            clearTimeout(cloudSaveTimer);
+            cloudSaveTimer = setTimeout(() => {
+                showSyncToast("正在同步中...", 1500);
+                pushToCloud();
+            }, 600);
+        }
+
+        // 通用的問號提示開關功能
+        function toggleHint(id) {
+            const text = document.getElementById(id);
+            if (text) {
+                text.classList.toggle("show");
+            }
+        }
+
+        // 產生飄落玉米粒的功能
+        function spawnKernel() {
+            const container = document.getElementById('falling-container');
+            if (!container) return;
+            const item = document.createElement('div');
+            item.className = 'falling-item';
+            
+            const inner = document.createElement('div');
+            inner.className = 'kernel-inner';
+            inner.innerHTML = CORN_SVG;
+            item.appendChild(inner);
+
+            const startX = Math.random() * 90 + 5; 
+            const fallDuration = 6 + Math.random() * 6; 
+            const swayDuration = 2 + Math.random() * 2; 
+            const swayAmount = 25 + Math.random() * 35; 
+
+            item.style.left = `${startX}vw`;
+            item.style.animation = `fall ${fallDuration}s linear forwards, sway ${swayDuration}s ease-in-out infinite alternate`;
+            item.style.setProperty('--sway-x', `${swayAmount}px`);
+
+            item.onclick = function(e) {
+                if (!inner.classList.contains('popped')) {
+                    inner.classList.add('popped');
+                    inner.innerHTML = POPCORN_SVG;
+                }
+            };
+
+            container.appendChild(item);
+
+            setTimeout(() => {
+                if(item.parentNode) item.remove();
+            }, fallDuration * 1000);
+        }
+
+        function renderStickersToolbar() {
+            const container = document.getElementById('stickersContainer');
+            if (!container) return;
+            container.innerHTML = '';
+            STICKERS.forEach((svgString, index) => {
+                container.innerHTML += `
+                    <div class="sticker-item" draggable="true" ondragstart="handleStickerDragStart(event, ${index})">
+                        ${svgString}
+                    </div>
+                `;
+            });
+        }
+
+        function renderTempTasks() {
+            const list = document.getElementById('tempTaskList');
+            if (!list) return;
+            list.innerHTML = '';
+            tempTasks.forEach((task, index) => {
+                const currentSticker = (task.sticker !== undefined && task.sticker !== null) ? STICKERS[task.sticker] : '';
+                const dropzoneClass = currentSticker ? 'sticker-dropzone has-sticker' : 'sticker-dropzone';
+                
+                list.innerHTML += `
+                    <div class="task-item" draggable="true"
+                         ondragstart="handleTaskDragStart(event, ${index})"
+                         ondragend="handleTaskDragEnd(event)"
+                         ondragover="allowDrop(event)"
+                         ondrop="handleTaskDrop(event, ${index})"
+                         onclick="toggleTempTask(${index}, this)">
+                         
+                        <input type="checkbox" ${task.completed ? 'checked' : ''}>
+                        
+                        <div class="${dropzoneClass}" 
+                             ondragover="allowDrop(event)"
+                             ondrop="handleStickerDrop(event, ${index})"
+                             onclick="clearSticker(event, ${index})"
+                             title="點擊可清除貼紙">
+                             ${currentSticker}
+                        </div>
+                        
+                        <div class="task-text">${task.text}</div>
+                        
+                        <button class="delete-btn" onclick="deleteTempTask(${index}, event)" title="刪除此任務">
+                            ${TRASH_SVG}
+                        </button>
+                    </div>
+                `;
+            });
+
+            const items = list.querySelectorAll('.task-item');
+            items.forEach(item => {
+                if (item.querySelector('input').checked) {
+                    item.classList.add('completed');
+                }
+            });
+        }
+
+        function handleStickerDragStart(e, stickerIndex) {
+            e.dataTransfer.setData('stickerId', stickerIndex);
+        }
+
+        function handleStickerDrop(e, taskIndex) {
+            e.preventDefault();
+            e.stopPropagation();
+            const stickerId = e.dataTransfer.getData('stickerId');
+            if (stickerId !== "") {
+                tempTasks[taskIndex].sticker = parseInt(stickerId);
+                saveTempTasks();
+                renderTempTasks();
+                triggerAutoSync();
+            }
+        }
+
+        function clearSticker(e, taskIndex) {
+            e.stopPropagation();
+            if (tempTasks[taskIndex].sticker !== null && tempTasks[taskIndex].sticker !== undefined) {
+                tempTasks[taskIndex].sticker = null;
+                saveTempTasks();
+                renderTempTasks();
+                triggerAutoSync();
+            }
+        }
+
+        function handleTaskDragStart(e, index) {
+            draggedTaskIndex = index;
+            e.dataTransfer.setData('taskIndex', index);
+            setTimeout(() => e.target.classList.add('dragging'), 0);
+        }
+
+        function handleTaskDragEnd(e) {
+            e.target.classList.remove('dragging');
+        }
+
+        function allowDrop(e) {
+            e.preventDefault();
+        }
+
+        function allowTaskReorderDrop(e) {
+            e.preventDefault();
+        }
+
+        function handleTaskDrop(e, targetIndex) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            if (e.dataTransfer.getData('stickerId')) return;
+
+            const sourceIndex = e.dataTransfer.getData('taskIndex');
+            if (!sourceIndex || draggedTaskIndex === null || draggedTaskIndex === targetIndex) return;
+
+            const draggedItem = tempTasks.splice(draggedTaskIndex, 1)[0];
+            tempTasks.splice(targetIndex, 0, draggedItem);
+            
+            draggedTaskIndex = null;
+            saveTempTasks();
+            renderTempTasks();
+            triggerAutoSync();
+        }
+
+        function addTempTask() {
+            const input = document.getElementById('tempInput');
+            const text = input.value.trim();
+            if (text) {
+                tempTasks.push({ text: text, completed: false, sticker: null });
+                input.value = '';
+                saveTempTasks();
+                renderTempTasks();
+                triggerAutoSync();
+            }
+        }
+
+        function handleKeyPress(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault(); 
+                addTempTask();
+            }
+        }
+
+        function deleteTempTask(index, event) {
+            event.stopPropagation();
+            if (confirm('確定要捨棄這個任務嗎？')) {
+                tempTasks.splice(index, 1);
+                saveTempTasks();
+                renderTempTasks();
+                triggerAutoSync();
+            }
+        }
+
+        function toggleTempTask(index, element) {
+            tempTasks[index].completed = !tempTasks[index].completed;
+            const checkbox = element.querySelector('input');
+            checkbox.checked = tempTasks[index].completed;
+            
+            if (checkbox.checked) {
+                element.classList.add('completed');
+            } else {
+                element.classList.remove('completed');
+            }
+            saveTempTasks();
+            triggerAutoSync();
+        }
+
+        function saveTempTasks() {
+            localStorage.setItem('sabrinaTempTasks', JSON.stringify(tempTasks));
+        }
+
+        function saveMonthTitle() {
+            const titleElement = document.getElementById('monthTitle');
+            if (titleElement) {
+                localStorage.setItem('pgStudioMonth', titleElement.innerText);
+                triggerAutoSync();
+            }
+        }
+
+        function toggleFixedTask(id, element) {
+            const checkbox = document.getElementById(id);
+            checkbox.checked = !checkbox.checked;
+            
+            if (checkbox.checked) {
+                element.classList.add('completed');
+                localStorage.setItem(id, 'true');
+            } else {
+                element.classList.remove('completed');
+                localStorage.setItem(id, 'false');
+            }
+            triggerAutoSync();
+        }
+
+        function toggleNotes() {
+            const content = document.getElementById("notesContent");
+            content.classList.toggle("show");
+        }
+
+        function generateBackupCode() {
+            let f = [];
+            for (let i = 1; i <= 9; i++) {
+                f.push(localStorage.getItem('mar' + i) === 'true' ? 1 : 0);
+            }
+            let m = document.getElementById('monthTitle').innerText;
+            let t = tempTasks.map(task => ({ x: task.text, c: task.completed ? 1 : 0, s: task.sticker }));
+            let data = { f, t, m };
+            try {
+                let jsonStr = JSON.stringify(data);
+                let encoded = btoa(encodeURIComponent(jsonStr));
+                
+                let display = document.getElementById('backupCodeDisplay');
+                display.value = encoded;
+                display.style.display = 'block';
+                display.select();
+                alert('備份碼已經成功產生並選取囉！\n請按 Ctrl+C (或右鍵複製)，把它存放在安全的地方。');
+            } catch (e) {
+                alert('產生備份碼時遇到一點小狀況，請稍後再試！');
+            }
+        }
+
+        function restoreFromCode() {
+            let code = document.getElementById('backupCodeInput').value.trim();
+            if (!code) {
+                alert('要先貼上備份碼，我才能幫您還原喔！');
+                return;
+            }
+            try {
+                let jsonStr = decodeURIComponent(atob(code));
+                let data = JSON.parse(jsonStr);
+
+                if (data.f && data.f.length) {
+                    data.f.forEach((val, index) => {
+                        let id = 'mar' + (index + 1);
+                        localStorage.setItem(id, val === 1 ? 'true' : 'false');
+                    });
+                }
+                if (data.t) {
+                    tempTasks = data.t.map(task => ({ text: task.x, completed: task.c === 1, sticker: task.s }));
+                    saveTempTasks();
+                }
+                if (data.m) {
+                    localStorage.setItem('pgStudioMonth', data.m);
+                }
+
+                alert('太棒了！還原成功！網頁即將重新載入以顯示您的最新資料。');
+                location.reload();
+            } catch (e) {
+                alert('哎呀！備份碼格式好像怪怪的，請檢查一下有沒有漏複製到喔！');
+            }
+        }
+
+        window.onload = function() {
+            // 1. 啟動背景飄落玉米粒動畫
+            setInterval(spawnKernel, 1500);
+
+            // 2. 讀取月份
+            const savedTitle = localStorage.getItem('pgStudioMonth');
+            if (savedTitle) {
+                document.getElementById('monthTitle').innerText = savedTitle;
+            } else {
+                document.getElementById('monthTitle').innerText = '4月';
+            }
+
+            // 3. 讀取固定業務打勾紀錄
+            for (let i = 1; i <= 9; i++) {
+                const box = document.getElementById('mar' + i);
+                if (box) {
+                    const savedStatus = localStorage.getItem('mar' + i);
+                    if (savedStatus === 'true') {
+                        box.checked = true;
+                        box.closest('.task-item').classList.add('completed');
+                    } else {
+                        box.checked = false;
+                        box.closest('.task-item').classList.remove('completed');
+                    }
+                }
+            }
+
+            // 4. 讀取臨時任務清單
+            const savedTempTasks = localStorage.getItem('sabrinaTempTasks');
+            if (savedTempTasks) {
+                tempTasks = JSON.parse(savedTempTasks);
+            } else {
+                tempTasks = [
+                    { text: "QCC oral", completed: false, sticker: null },
+                    { text: "醫務會議宣傳鎖 PRN", completed: false, sticker: null },
+                    { text: "講全院寄信提醒", completed: false, sticker: null }
+                ];
+                saveTempTasks();
+            }
+
+            // 5. 初始化同步碼輸入框
+            const currentSyncKey = getSyncKey();
+            const syncInput = document.getElementById('syncKeyInput');
+            if (syncInput) syncInput.value = currentSyncKey;
+            
+            renderStickersToolbar();
+            renderTempTasks();
+
+            // 6. 啟動跨裝置雲端同步
+            syncWithCloud(false);
+        };
+    </script>
+</body>
+</html>
