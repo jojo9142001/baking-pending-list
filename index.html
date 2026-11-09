@@ -960,7 +960,7 @@ Dear主任、總藥師：藥劑科臨床組115-?業務量表如附件，請查�
             const input = document.getElementById('tempInput');
             const text = input.value.trim();
             if (text) {
-                tempTasks.push({ text: text, completed: false, sticker: null });
+                tempTasks.unshift({ text: text, completed: false, sticker: null });
                 input.value = '';
                 saveTempTasks();
                 renderTempTasks();
